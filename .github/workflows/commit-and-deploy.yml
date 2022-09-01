@@ -47,18 +47,17 @@ jobs:
   check-commit-deploy:
     name: check, commit and deploy
     concurrency:
-       group: cad-${{ inputs.environment }}
+      group: cad-${{ inputs.environment }}
     runs-on: ubuntu-20.04
-    name: can I deploy?
     steps:
-       - run: |
+      - run: |
            docker run pactfoundation/pact-cli pact-broker can-i-deploy \
             --pacticipant=${MICROSERVICE} \
             --broker-base-url=${PACTFLOW_HOST} \
             --version=${TAG} \
             -k ${PACTFLOW_TOKEN} \
             --to=${ENVIRONMENT}
-         if: inputs.pact   
+        if: inputs.pact
       - uses: actions/checkout@v3
         with:
           repository: S SBLogX/kubernetes
