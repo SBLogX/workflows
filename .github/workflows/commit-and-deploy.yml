@@ -44,7 +44,10 @@ env:
   ENVIRONMENT: ${{ inputs.environment }}
 
 jobs:
-  can-i-deploy:
+  check-commit-deploy:
+    name: check, commit and deploy
+    concurrency:
+       group: cad-${{ inputs.environment }}
     runs-on: ubuntu-20.04
     name: can I deploy?
     steps:
@@ -56,14 +59,6 @@ jobs:
             -k ${PACTFLOW_TOKEN} \
             --to=${ENVIRONMENT}
          if: inputs.pact   
-  commit:
-    needs:
-      - can-i-deploy
-    runs-on: ubuntu-20.04
-    name: commit
-    concurrency:
-       group: cad-${{ inputs.environment }}
-    steps:
       - uses: actions/checkout@v3
         with:
           repository: S SBLogX/kubernetes
