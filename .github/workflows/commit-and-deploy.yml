@@ -60,7 +60,7 @@ jobs:
         if: inputs.pact
       - uses: actions/checkout@v3
         with:
-          repository: S SBLogX/kubernetes
+          repository: SBLogX/kubernetes
 
           token: ${{ secrets.gh_access_token }}
           ref: master
