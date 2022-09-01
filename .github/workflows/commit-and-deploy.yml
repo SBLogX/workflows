@@ -1,0 +1,147 @@
+name: Commit and deploy
+on:
+  workflow_call:
+    inputs:
+      microservice:
+        description: 'Microservice à déployer'
+        type: string
+        required: true
+      environment:
+        description: 'Environnement'
+        type: choice
+        required: true
+        options:
+          - dev
+          - quality
+          - preprod
+          - prod
+      tag:
+        description: 'Tag dans ACR'
+        type: string
+        required: true
+      pact:
+        description: 'PACT required'
+        type: boolean
+        required: false
+        default: false
+    secrets:
+      pactflow_host:
+        required: true
+      pactflow_token:
+        required: true
+      gh_access_token:
+        required: true
+      az_credentials_dev:
+        required: true
+      az_credentials_quality:
+        required: true
+      az_credentials_preprod:
+        required: true
+      az_credentials_prod:
+        required: true
+
+
+env:
+  MICROSERVICE: ${{  inputs.microservice  }}
+  PACTFLOW_HOST: ${{  secrets.pactflow_host  }}
+  TAG: ${{  inputs.tag  }}
+  PACTFLOW_TOKEN: ${{ secrets.pactflow_token }}
+  ENVIRONMENT: ${{ inputs.environment }}
+
+jobs:
+  can-i-deploy:
+    runs-on: ubuntu-20.04
+    name: can I deploy?
+    steps:
+       - run: |
+           docker run pactfoundation/pact-cli pact-broker can-i-deploy \
+            --pacticipant=${MICROSERVICE} \
+            --broker-base-url=${PACTFLOW_HOST} \
+            --version=${TAG} \
+            -k ${PACTFLOW_TOKEN} \
+            --to=${ENVIRONMENT}
+         if: inputs.pact   
+  commit:
+    needs:
+      - can-i-deploy
+    runs-on: ubuntu-20.04
+    name: commit
+    concurrency:
+       group: cad-${{ inputs.environment }}
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          repository: S SBLogX/kubernetes
+
+          token: ${{ secrets.gh_access_token }}
+          ref: master
+
+      - name: Update values file in kubernetes repo
+        run: |
+          yq -i '(.${{ inputs.microservice }}.image.tag)|="'${{ inputs.tag }}'"' $GITHUB_WORKSPACE/helm/upply-stack/values.${{inputs.environment}}.yaml
+          cd $GITHUB_WORKSPACE
+          git config --global user.name "upply-devops"
+          git config --global user.email "devops@upply.com"
+          git add $GITHUB_WORKSPACE/helm/upply-stack/values.${{inputs.environment}}.yaml
+          git diff-index --quiet HEAD || git commit -m "release upply-${{ inputs.environment }}-${{ inputs.microservice }}-${{ inputs.tag }}"
+          git pull --rebase=true origin master
+          git push origin master
+
+      - name: Login to Azure dev environment
+        if: inputs.environment == 'dev'
+        uses: Azure/login@v1
+        with:
+          creds: ${{ secrets.az_credentials_dev }}
+
+      - name: Login to Azure quality environment
+        if: inputs.environment == 'quality'
+        uses: Azure/login@v1
+        with:
+          creds: ${{ secrets.az_credentials_quality }}
+
+      - name: Login to Azure preprod environment
+        if: inputs.environment == 'preprod'
+        uses: Azure/login@v1
+        with:
+          creds: ${{ secrets.az_credentials_preprod }}
+
+      - name: Login to Azure prod environment
+        if: inputs.environment == 'prod'
+        uses: Azure/login@v1
+        with:
+          creds: ${{ secrets.az_credentials_prod }}
+
+      - name: Deploy via helm
+        run: |
+            cd $GITHUB_WORKSPACE/helm
+            COMMAND=$(az aks command invoke \
+            -n upply-$ENVIRONMENT-neu-k8s-aks \
+            -g upply-$ENVIRONMENT \
+            -c "helm upgrade -i upply-$ENVIRONMENT upply-stack -f upply-stack/values.$ENVIRONMENT.yaml -n $ENVIRONMENT" \
+            -f . | grep -i error  || true)
+            if [ -z "$COMMAND" ]; then
+              echo ::set-output name=deployment_succeeded::true
+            else
+              echo ::set-output name=deployment_succeeded::false
+              echo ::set-output name=deployment_error_code::$COMMAND
+            fi
+        id: deployment
+        env:
+          ENVIRONMENT: ${{ inputs.environment }}
+
+      - name: Check if deployment succeeded
+        if: ${{ steps.deployment.outputs.deployment_succeeded == 'false'}}
+        uses: actions/github-script@v6
+        with:
+          script: |
+              core.setFailed(`Deployment to $ENVIRONMENT cluster failed,  ${{ steps.deployment.outputs.deployment_error_code }}`)
+
+      - name: Notify pact
+        if: inputs.pact
+        run: |
+          docker run pactfoundation/pact-cli broker record_deployment \
+            --pacticipant=${MICROSERVICE} \
+            --broker-base-url=${PACTFLOW_HOST} \
+            --version=${TAG} \
+            -k ${PACTFLOW_TOKEN} \
+            --environment=${ENVIRONMENT}
