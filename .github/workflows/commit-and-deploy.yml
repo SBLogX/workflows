@@ -34,8 +34,11 @@ on:
         required: true
       az_credentials_prod:
         required: true
-
-
+      tech_user_account:
+        required: true
+      tech_user_account_email:
+        required: true
+      
 env:
   MICROSERVICE: ${{  inputs.microservice  }}
   PACTFLOW_HOST: ${{  secrets.pactflow_host  }}
@@ -69,8 +72,8 @@ jobs:
         run: |
           yq -i '(.${{ inputs.microservice }}.image.tag)|="'${{ inputs.tag }}'"' $GITHUB_WORKSPACE/helm/upply-stack/values.${{inputs.environment}}.yaml
           cd $GITHUB_WORKSPACE
-          git config --global user.name "upply-devops"
-          git config --global user.email "devops@upply.com"
+          git config --global user.name "${{ secrets.tech_user_account }}"
+          git config --global user.email "${{ secrets.tech_user_account_email }}"
           git add $GITHUB_WORKSPACE/helm/upply-stack/values.${{inputs.environment}}.yaml
           git diff-index --quiet HEAD || git commit -m "release upply-${{ inputs.environment }}-${{ inputs.microservice }}-${{ inputs.tag }}"
           git pull --rebase=true origin master
