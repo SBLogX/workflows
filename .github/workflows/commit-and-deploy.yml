@@ -38,7 +38,7 @@ on:
         required: true
       tech_user_account_email:
         required: true
-   workflow_dispatch:
+  workflow_dispatch:
     inputs:
       microservice:
         description: 'Microservice à déployer'
