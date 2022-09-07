@@ -38,7 +38,26 @@ on:
         required: true
       tech_user_account_email:
         required: true
-      
+   workflow_dispatch:
+    inputs:
+      microservice:
+        description: 'Microservice à déployer'
+        type: string
+        required: true
+      environment:
+        description: 'Environnement'
+        type: string
+        required: true
+      tag:
+        description: 'Tag dans ACR'
+        type: string
+        required: true
+      pact:
+        description: 'PACT required'
+        type: boolean
+        required: false
+        default: false
+     
 env:
   MICROSERVICE: ${{  inputs.microservice  }}
   PACTFLOW_HOST: ${{  secrets.pactflow_host  }}
@@ -67,7 +86,6 @@ jobs:
 
           token: ${{ secrets.gh_access_token }}
           ref: master
-
       - name: Update values file in kubernetes repo
         run: |
           yq -i '(.${{ inputs.microservice }}.image.tag)|="'${{ inputs.tag }}'"' $GITHUB_WORKSPACE/helm/upply-stack/values.${{inputs.environment}}.yaml
