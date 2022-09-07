@@ -86,7 +86,7 @@ jobs:
 
           token: ${{ secrets.gh_access_token }}
           ref: master
-        name: check if the value exists
+      - name: check if the value exists
         run: |
           yq 'keys' $GITHUB_WORKSPACE/helm/upply-stack/values.${{inputs.environment}}.yaml | grep -E '^\- '${{ inputs.microservice }}'$'
 
