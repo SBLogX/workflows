@@ -84,7 +84,7 @@ jobs:
         with:
           repository: SBLogX/kubernetes
 
-          token: ${{ secrets.gh_access_token }}
+          token: ${{ secrets.gh_access_token }}
           ref: master
       - name: Update values file in kubernetes repo
         run: |
@@ -96,55 +96,6 @@ jobs:
           git diff-index --quiet HEAD || git commit -m "release upply-${{ inputs.environment }}-${{ inputs.microservice }}-${{ inputs.tag }}"
           git pull --rebase=true origin master
           git push origin master
-
-      - name: Login to Azure dev environment
-        if: inputs.environment == 'dev'
-        uses: Azure/login@v1
-        with:
-          creds: ${{ secrets.az_credentials_dev }}
-
-      - name: Login to Azure quality environment
-        if: inputs.environment == 'quality'
-        uses: Azure/login@v1
-        with:
-          creds: ${{ secrets.az_credentials_quality }}
-
-      - name: Login to Azure preprod environment
-        if: inputs.environment == 'preprod'
-        uses: Azure/login@v1
-        with:
-          creds: ${{ secrets.az_credentials_preprod }}
-
-      - name: Login to Azure prod environment
-        if: inputs.environment == 'prod'
-        uses: Azure/login@v1
-        with:
-          creds: ${{ secrets.az_credentials_prod }}
-
-      - name: Deploy via helm
-        run: |
-            cd $GITHUB_WORKSPACE/helm
-            COMMAND=$(az aks command invoke \
-            -n upply-$ENVIRONMENT-neu-k8s-aks \
-            -g upply-$ENVIRONMENT \
-            -c "helm upgrade -i upply-$ENVIRONMENT upply-stack -f upply-stack/values.$ENVIRONMENT.yaml -n $ENVIRONMENT" \
-            -f . | grep -i error  || true)
-            if [ -z "$COMMAND" ]; then
-              echo ::set-output name=deployment_succeeded::true
-            else
-              echo ::set-output name=deployment_succeeded::false
-              echo ::set-output name=deployment_error_code::$COMMAND
-            fi
-        id: deployment
-        env:
-          ENVIRONMENT: ${{ inputs.environment }}
-
-      - name: Check if deployment succeeded
-        if: ${{ steps.deployment.outputs.deployment_succeeded == 'false'}}
-        uses: actions/github-script@v6
-        with:
-          script: |
-              core.setFailed(`Deployment to $ENVIRONMENT cluster failed,  ${{ steps.deployment.outputs.deployment_error_code }}`)
 
       - name: Notify pact
         if: inputs.pact
