@@ -97,15 +97,15 @@ jobs:
       
       - name: check if the value exists
         run: |
-          yq 'keys' ./helm/upply-stack/values.${{inputs.environment}}.yaml | grep -E '^\- '${{ inputs.microservice }}'$'
+          cd */helm
+          yq 'keys' ./upply-stack/values.${{inputs.environment}}.yaml | grep -E '^\- '${{ inputs.microservice }}'$'
 
       - name: Update values file in kubernetes repo
         run: |
-          yq -i '(.${{ inputs.microservice }}.image.tag)|="'${{ inputs.tag }}'"' ./helm/upply-stack/values.${{inputs.environment}}.yaml
-          cd $GITHUB_WORKSPACE
+          yq -i '(.${{ inputs.microservice }}.image.tag)|="'${{ inputs.tag }}'"' ./upply-stack/values.${{inputs.environment}}.yaml
           git config --global user.name "${{ secrets.tech_user_account }}"
           git config --global user.email "${{ secrets.tech_user_account_email }}"
-          git add ./helm/upply-stack/values.${{inputs.environment}}.yaml
+          git add ./upply-stack/values.${{inputs.environment}}.yaml
           git diff-index --quiet HEAD || git commit -m "release upply-${{ inputs.environment }}-${{ inputs.microservice }}-${{ inputs.tag }}"
           git pull --rebase=true origin master
           git push origin master
@@ -136,7 +136,6 @@ jobs:
 
       - name: Deploy via helm
         run: |
-            cd ./helm
             COMMAND=$(az aks command invoke \
             -n upply-$ENVIRONMENT-neu-k8s-aks \
             -g upply-$ENVIRONMENT \
