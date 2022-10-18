@@ -19,7 +19,6 @@ jobs:
   publish_pact:
     name: Publish Pact provider contract
     runs-on: ubuntu-latest
-    needs: test
     steps:
       - name: Login to ACR prod
         uses: docker/login-action@v2
