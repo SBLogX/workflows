@@ -29,10 +29,10 @@ jobs:
           password: ${{ secrets.UPPLY_ACR_PROD_PASSWORD }}
 
       - name: Pull image
-        run: docker pull ${{ input.image }}
+        run: docker pull ${{ inputs.image }}
 
       - name: Dump openapi schema
-        run: docker run ${{ input.image }} bin/console nelmio:apidoc:dump > openapi.json
+        run: docker run ${{ inputs.image }} bin/console nelmio:apidoc:dump > openapi.json
 
       - name: Publish
         run: >
@@ -41,7 +41,7 @@ jobs:
           openapi.json
           -b ${{ secrets.PACTFLOW_HOST  }}
           -k ${{ secrets.PACTFLOW_TOKEN }}
-          --provider=${{ input.provider }}
-          --provider-app-version=${{ input.version }}
-          --branch=${{ input.branch }}
+          --provider=${{ inputs.provider }}
+          --provider-app-version=${{ inputs.version }}
+          --branch=${{ inputs.branch }}
           --content-type=application/json
