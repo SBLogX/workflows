@@ -70,7 +70,7 @@ jobs:
     name: check, commit and deploy
     concurrency:
       group: cad-${{ inputs.environment }}
-    runs-on: self-hosted
+    runs-on: ubuntu-20.04
     steps:
       - run: |
            docker run pactfoundation/pact-cli pact-broker can-i-deploy \
