@@ -70,7 +70,7 @@ jobs:
     name: check, commit and deploy
     concurrency:
       group: cad-${{ inputs.environment }}
-    runs-on: ubuntu-20.04
+    runs-on: self-hosted
     steps:
       - run: |
            docker run pactfoundation/pact-cli pact-broker can-i-deploy \
@@ -80,23 +80,32 @@ jobs:
             -k ${PACTFLOW_TOKEN} \
             --to=${ENVIRONMENT}
         if: inputs.pact
+      
+      - name: 'Cleanup build folder before checkout'
+        run: |
+          ls -la ./
+          rm -rf ./* || true
+          rm -rf ./.??* || true
+          ls -la ./
+      
       - uses: actions/checkout@v3
         with:
           repository: SBLogX/kubernetes
 
           token: ${{ secrets.gh_access_token }}
           ref: master
+      
       - name: check if the value exists
         run: |
-          yq 'keys' $GITHUB_WORKSPACE/helm/upply-stack/values.${{inputs.environment}}.yaml | grep -E '^\- '${{ inputs.microservice }}'$'
+          yq 'keys' ./helm/upply-stack/values.${{inputs.environment}}.yaml | grep -E '^\- '${{ inputs.microservice }}'$'
 
       - name: Update values file in kubernetes repo
         run: |
-          yq -i '(.${{ inputs.microservice }}.image.tag)|="'${{ inputs.tag }}'"' $GITHUB_WORKSPACE/helm/upply-stack/values.${{inputs.environment}}.yaml
+          yq -i '(.${{ inputs.microservice }}.image.tag)|="'${{ inputs.tag }}'"' ./helm/upply-stack/values.${{inputs.environment}}.yaml
           cd $GITHUB_WORKSPACE
           git config --global user.name "${{ secrets.tech_user_account }}"
           git config --global user.email "${{ secrets.tech_user_account_email }}"
-          git add $GITHUB_WORKSPACE/helm/upply-stack/values.${{inputs.environment}}.yaml
+          git add ./helm/upply-stack/values.${{inputs.environment}}.yaml
           git diff-index --quiet HEAD || git commit -m "release upply-${{ inputs.environment }}-${{ inputs.microservice }}-${{ inputs.tag }}"
           git pull --rebase=true origin master
           git push origin master
@@ -127,7 +136,7 @@ jobs:
 
       - name: Deploy via helm
         run: |
-            cd $GITHUB_WORKSPACE/helm
+            cd ./helm
             COMMAND=$(az aks command invoke \
             -n upply-$ENVIRONMENT-neu-k8s-aks \
             -g upply-$ENVIRONMENT \
