@@ -1,0 +1,105 @@
+name: Gitflow Release
+on:
+  workflow_call: ~
+
+jobs:
+  setup_pr:
+    name: Setup PR
+    runs-on: ubuntu-latest
+    outputs:
+      tag: ${{ steps.get_tag.outputs.tag }}
+      pr_created: ${{ steps.create_pr.outputs.result }}
+    steps:
+      - name: Get release version
+        id: get_tag
+        run: |
+          TAG_REF=$(echo $GITHUB_REF | sed -e "s#refs/heads/release/##g")
+          echo "::set-output name=tag::$TAG_REF"
+
+      - name: Create Pull request
+        id: create_pr
+        uses: actions/github-script@v6
+        with:
+          result-encoding: string
+          script: |
+            const { data: pulls } = await github.rest.pulls.list({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              head: context.ref,
+              base: 'main',
+              state: 'open',
+              per_page: 1
+            });
+            if (pulls.length > 0) {
+              console.log('Pull request already exists', pulls[0].html_url);
+              return 'false';
+            }
+            const { data: pull } = await github.rest.pulls.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: 'Release ${{ steps.get_tag.outputs.tag }}',
+              head: context.ref,
+              base: 'main'
+            })
+            console.log('Pull request created');
+
+            return 'true';
+
+  release_candidate:
+    name: Publish release candidate
+    runs-on: ubuntu-latest
+    needs: setup_pr
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
+
+      - name: Resolve new RC tag
+        id: rc_tag
+        run: |
+          if [[ '${{ needs.setup_pr.outputs.pr_created }}' == 'true' ]]
+          then
+            TAG_RC_REF="${{ needs.setup_pr.outputs.tag }}-rc.1"
+          else
+            TAG_RC_REF=$(git describe --abbrev=0 --tags | awk -F. -v OFS=. '{$NF += 1 ; print}')
+          fi
+          echo "::set-output name=tag::$TAG_RC_REF"
+
+      - name: Create Release candidate
+        uses: actions/github-script@v6
+        with:
+          github-token: ${{ secrets.GH_ACCESS_TOKEN }}
+          script: |
+            const { data: release } = await github.rest.repos.createRelease({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              target_commitish: context.ref,
+              tag_name: '${{ steps.rc_tag.outputs.tag }}',
+              name: 'v${{ steps.rc_tag.outputs.tag }}',
+              prerelease: true,
+              generate_release_notes: true
+            });
+            
+            console.log('Release candidate created');
+
+            const { data: pulls } = await github.rest.pulls.list({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              state: 'open',
+              base: 'main',
+              head: context.ref,
+              per_page: 1
+            });
+
+            for (const pull of pulls) {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: pull.number,
+                body: `New release candidate [${{ steps.rc_tag.outputs.tag }}](${ release.html_url })`
+              });
+              console.log('Pull request commented');
+
+              return;
+            }

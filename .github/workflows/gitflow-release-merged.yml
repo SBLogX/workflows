@@ -1,0 +1,61 @@
+name: Gitflow Release merged
+on:
+  workflow_call: ~
+
+jobs:
+  set_tag:
+    runs-on: ubuntu-latest
+    name: Set tag
+    outputs:
+      tag: ${{ steps.set_tag.outputs.tag }}
+      tag_rc: ${{ steps.set_tag.outputs.tag_rc }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
+
+      - name: Set release tag
+        id: set_tag
+        run: |
+          TAG_REF=$(echo '${{ github.head_ref }}' | sed -e "s#release/##g")
+          TAG_RC_REF=$(git describe --abbrev=0 --tags origin/${{ github.head_ref }})
+          echo "::set-output name=tag::$TAG_REF"
+          echo "::set-output name=tag_rc::$TAG_RC_REF"
+
+      - name: Create Release
+        uses: actions/github-script@v6
+        with:
+          script: |
+            github.rest.repos.createRelease({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              target_commitish: context.ref,
+              tag_name: '${{ steps.set_tag.outputs.tag }}',
+              name: 'v${{ steps.set_tag.outputs.tag }}',
+              prerelease: false,
+              generate_release_notes: true
+            });
+
+  sync_develop:
+    runs-on: ubuntu-latest
+    name: Sync develop
+    needs: set_tag
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Merge release in develop
+        uses: actions/github-script@v6
+        with:
+          github-token: ${{ secrets.GH_ACCESS_TOKEN }}
+          script: |
+            github.rest.repos.merge({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              base: 'develop',
+              head: '${{ github.head_ref }}'
+            });
+
+      - name: Delete release branch
+        run: git push origin --delete ${{ github.head_ref }}

@@ -1,0 +1,84 @@
+name: Gitflow Hotfix merged
+on:
+  workflow_call: ~
+
+jobs:
+  set_tag:
+    runs-on: ubuntu-latest
+    if: github.event.pull_request.merged == true && startsWith(github.head_ref, 'hotfix/')
+    name: Set tag
+    outputs:
+      tag: ${{ steps.set_tag.outputs.tag }}
+      tag_hf: ${{ steps.set_tag.outputs.tag_hf }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
+
+      - name: Set release tag
+        id: set_tag
+        run: |
+          TAG_REF=$(echo '${{ github.head_ref }}' | sed -e "s#hotfix/##g")
+          TAG_HF_REF=$(git describe --abbrev=0 --tags origin/${{ github.head_ref }})
+          echo "::set-output name=tag::$TAG_REF"
+          echo "::set-output name=tag_hf::$TAG_HF_REF"
+
+      - name: Create Release
+        uses: actions/github-script@v6
+        with:
+          script: |
+            github.rest.repos.createRelease({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              target_commitish: context.ref,
+              tag_name: '${{ steps.set_tag.outputs.tag }}',
+              name: 'v${{ steps.set_tag.outputs.tag }}',
+              prerelease: false,
+              generate_release_notes: true
+            });
+
+  sync_branches:
+    runs-on: ubuntu-latest
+    name: Sync branches
+    needs: set_tag
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Merge hotfix in develop
+        uses: actions/github-script@v6
+        with:
+          github-token: ${{ secrets.GH_ACCESS_TOKEN }}
+          script: |
+            github.rest.repos.merge({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              base: 'develop',
+              head: '${{ github.head_ref }}'
+            });
+
+      - name: Merge hotfix in releases
+        uses: actions/github-script@v6
+        with:
+          github-token: ${{ secrets.GH_ACCESS_TOKEN }}
+          script: |
+            const branches = await github.paginate(github.rest.repos.listBranches, {
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              protected: false,
+            })
+
+            for (const branch of branches) {
+              if (branch.name.startsWith('release/')) {
+                github.rest.repos.merge({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  base: branch.name,
+                  head: '${{ github.head_ref }}'
+                });
+              }
+            }
+
+      - name: Delete branch
+        run: git push origin --delete ${{ github.head_ref }}
