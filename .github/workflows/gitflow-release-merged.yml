@@ -11,7 +11,7 @@ jobs:
       tag_rc: ${{ steps.set_tag.outputs.tag_rc }}
     steps:
       - name: Checkout code
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
         with:
           fetch-depth: 0
 
@@ -43,7 +43,7 @@ jobs:
     needs: set_tag
     steps:
       - name: Checkout code
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
 
       - name: Merge release in develop
         uses: actions/github-script@v6
