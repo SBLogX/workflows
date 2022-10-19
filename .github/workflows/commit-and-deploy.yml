@@ -78,13 +78,13 @@ jobs:
             --broker-base-url=${PACTFLOW_HOST} \
             --version=${TAG} \
             -k ${PACTFLOW_TOKEN} \
-            --to=${ENVIRONMENT}
+            --to-environment=${ENVIRONMENT}
         if: inputs.pact
       - uses: actions/checkout@v3
         with:
           repository: SBLogX/kubernetes
 
-          token: ${{ secrets.gh_access_token }}
+          token: ${{ secrets.gh_access_token }}
           ref: master
       - name: check if the value exists
         run: |
