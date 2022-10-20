@@ -71,7 +71,9 @@ jobs:
             upplypreprod.azurecr.io/${{ inputs.name }}:${{ inputs.tag }}
             upplyprod.azurecr.io/${{ inputs.name }}:${{ inputs.version }}
             upplyprod.azurecr.io/${{ inputs.name }}:${{ inputs.tag }}
-          build-args: ${{ inputs.build-args }}
+          build-args: |
+            GITHUB_TOKEN=${{ secrets.GH_ACCESS_TOKEN }}
+            ${{ inputs.build-args }}
           push: true
           cache-from: type=registry,ref=upplyprod.azurecr.io/${{ inputs.name }}:${{ inputs.tag }}
           cache-to: type=inline
@@ -82,7 +84,9 @@ jobs:
         with:
           context: .
           tags: upplyprod.azurecr.io/${{ inputs.name }}:${{ inputs.version }}
-          build-args: ${{ inputs.build-args }}
+          build-args:  |
+            GITHUB_TOKEN=${{ secrets.GH_ACCESS_TOKEN }}
+            ${{ inputs.build-args }}
           push: false
           cache-from: type=registry,ref=upplyprod.azurecr.io/${{ inputs.name }}:${{ inputs.tag }}
           cache-to: type=inline
