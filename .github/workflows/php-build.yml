@@ -14,6 +14,10 @@ on:
       build-args:
         required: true
         type: string
+      context:
+        required: false
+        type: string
+        default: "."
       artifact:
         required: false
         default: false
@@ -69,7 +73,7 @@ jobs:
         uses: docker/build-push-action@v3
         if: inputs.artifact == false
         with:
-          context: .
+          context: ${{ inputs.context }}
           tags: |
             upplydev.azurecr.io/${{ inputs.name }}:${{ inputs.version }}
             upplydev.azurecr.io/${{ inputs.name }}:${{ inputs.tag }}
@@ -90,7 +94,7 @@ jobs:
         uses: docker/build-push-action@v3
         if: inputs.artifact == true
         with:
-          context: .
+          context: ${{ inputs.context }}
           tags: upplyprod.azurecr.io/${{ inputs.name }}:${{ inputs.version }}
           build-args:  |
             GITHUB_TOKEN=${{ secrets.GH_ACCESS_TOKEN }}
