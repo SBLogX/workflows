@@ -16,7 +16,8 @@ on:
         type: string
       artifact:
         required: false
-        type: string
+        default: false
+        type: boolean
 
 jobs:
   build_image:
@@ -59,7 +60,7 @@ jobs:
 
       - name: Build and push in registry
         uses: docker/build-push-action@v3
-        if: inputs.artifact == null
+        if: inputs.artifact == false
         with:
           context: .
           tags: |
@@ -80,7 +81,7 @@ jobs:
 
       - name: Build and push as artifact
         uses: docker/build-push-action@v3
-        if: inputs.artifact != null
+        if: inputs.artifact == true
         with:
           context: .
           tags: upplyprod.azurecr.io/${{ inputs.name }}:${{ inputs.version }}
@@ -90,12 +91,12 @@ jobs:
           push: false
           cache-from: type=registry,ref=upplyprod.azurecr.io/${{ inputs.name }}:${{ inputs.tag }}
           cache-to: type=inline
-          outputs: type=docker,dest=/tmp/image.tar
+          outputs: type=docker,dest=/tmp/${{ inputs.name }}.tar
 
       - name: Upload artifact
         uses: actions/upload-artifact@v3
-        if: inputs.artifact != null
+        if: inputs.artifact == true
         with:
-          name: ${{ inputs.artifact }}
-          path: /tmp/image.tar
+          name: ${{ inputs.name }}
+          path: /tmp/${{ inputs.name }}.tar
           retention-days: 1
