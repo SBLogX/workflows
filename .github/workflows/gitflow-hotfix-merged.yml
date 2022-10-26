@@ -41,7 +41,6 @@ jobs:
   sync_branches:
     runs-on: ubuntu-latest
     name: Sync branches
-    needs: set_tag
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
@@ -82,3 +81,23 @@ jobs:
 
       - name: Delete branch
         run: git push origin --delete ${{ github.head_ref }}
+
+  deploy:
+    runs-on: ubuntu-latest
+    name: Deploy
+    needs: set_tag
+    steps:
+      - name: Dispatch hotfix deploy
+        uses: actions/github-script@v6
+        with:
+          github-token: ${{ secrets.GH_ACCESS_TOKEN }}
+          script: |
+            github.rest.actions.createWorkflowDispatch({
+              owner: context.repo.owner,
+              repo: 'kubernetes',
+              workflow_id: 'commit-hotfix-deployment.yml',
+              ref: 'master',
+              inputs: {
+                hotfix_tag: context.repo.repo + '-${{ needs.set_tag.outputs.tag }}',
+              },
+            });

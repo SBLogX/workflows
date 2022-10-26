@@ -40,7 +40,6 @@ jobs:
   sync_develop:
     runs-on: ubuntu-latest
     name: Sync develop
-    needs: set_tag
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
