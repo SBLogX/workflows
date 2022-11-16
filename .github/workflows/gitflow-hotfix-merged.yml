@@ -41,6 +41,8 @@ jobs:
   sync_branches:
     runs-on: ubuntu-latest
     name: Sync branches
+    needs:
+      - set_tag
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
