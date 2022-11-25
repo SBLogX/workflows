@@ -38,6 +38,12 @@ on:
         required: true
       tech_user_account_email:
         required: true
+      dev_cluster_webhook:
+        required: true
+      quality_cluster_webhook:
+        required: true
+      preprod_cluster_webhook:
+        required: true
   workflow_dispatch:
     inputs:
       microservice:
@@ -110,3 +116,28 @@ jobs:
             --version=${TAG} \
             -k ${PACTFLOW_TOKEN} \
             --environment=${ENVIRONMENT}
+
+      - name: Notify teams for dev
+        uses: skitionek/notify-microsoft-teams@master
+        if: inputs.environment == 'dev'
+        with: 
+          webhook_url: ${{ secrets.dev_cluster_webhook }}
+          overwrite: "{title: `${{ inputs.microservice }}:${{ inputs.tag }} deploying.`}"
+          job: ${{ toJson(job) }}
+
+      - name: Notify teams for quality
+        uses: skitionek/notify-microsoft-teams@master
+        if: inputs.environment == 'quality'
+        with: 
+          webhook_url: ${{ secrets.quality_cluster_webhook }}
+          overwrite: "{title: `${{ inputs.microservice }}:${{ inputs.tag }} deploying.`}"
+          job: ${{ toJson(job) }}
+
+      - name: Notify teams for preprod
+        uses: skitionek/notify-microsoft-teams@master
+        if: inputs.environment == 'preprod'
+        with: 
+          webhook_url: ${{ secrets.preprod_cluster_webhook }}
+          overwrite: "{title: `${{ inputs.microservice }}:${{ inputs.tag }} deploying.`}"
+          job: ${{ toJson(job) }}
+
