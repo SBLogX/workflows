@@ -141,3 +141,11 @@ jobs:
           overwrite: "{title: `${{ inputs.microservice }}:${{ inputs.tag }} deploying.`}"
           job: ${{ toJson(job) }}
 
+      - name: Notify teams for preprod
+        uses: skitionek/notify-microsoft-teams@master
+        if: inputs.environment == 'prod'
+        with: 
+          webhook_url: ${{ secrets.prod_cluster_webhook }}
+          overwrite: "{title: `${{ inputs.microservice }}:${{ inputs.tag }} deploying.`}"
+          job: ${{ toJson(job) }}
+
