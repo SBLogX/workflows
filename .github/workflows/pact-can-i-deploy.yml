@@ -1,0 +1,24 @@
+name: Pact
+on:
+  workflow_call:
+    inputs:
+      name:
+        required: true
+        type: string
+      version:
+        type: string
+        required: true
+
+jobs:
+  can_i_deploy:
+    name: Can I Deploy
+    runs-on: ubuntu-latest
+    steps:
+      - name: Can I Deploy
+        run: >
+          docker run pactfoundation/pact-cli
+          pact-broker can-i-deploy
+          -b ${{ secrets.PACTFLOW_HOST  }}
+          -k ${{ secrets.PACTFLOW_TOKEN }}
+          --pacticipant ${{ inputs.name }}
+          --version ${{ inputs.version }}
