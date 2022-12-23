@@ -8,6 +8,9 @@ on:
       version:
         type: string
         required: true
+      environment:
+        type: string
+        required: true
 
 jobs:
   can_i_deploy:
@@ -22,3 +25,4 @@ jobs:
           -k ${{ secrets.PACTFLOW_TOKEN }}
           --pacticipant ${{ inputs.name }}
           --version ${{ inputs.version }}
+          --to-environment ${{ inputs.environment }}
