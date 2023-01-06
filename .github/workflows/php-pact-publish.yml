@@ -34,8 +34,11 @@ jobs:
         run: docker run -e APP_ENV=prod ${{ inputs.image }} bin/console nelmio:apidoc:dump
       - name: Dump openapi schema
         run: docker run -e APP_ENV=prod ${{ inputs.image }} bin/console nelmio:apidoc:dump > openapi.json
-
-
+      - name: Upload artifact
+        uses: actions/upload-artifact@v3
+        with:
+           name: openapi
+           path: openapi.json
       - name: Publish
         run: >
           docker run -v ${PWD}:/app -w "/app" pactfoundation/pact-cli
@@ -47,3 +50,4 @@ jobs:
           --provider-app-version=${{ inputs.version }}
           --branch=${{ inputs.branch }}
           --content-type=application/json
+    
