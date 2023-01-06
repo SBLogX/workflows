@@ -31,9 +31,9 @@ jobs:
         run: docker pull ${{ inputs.image }}
       
       - name: Echo openapi schema
-        run: docker run -e APP_ENV=prod ${{ inputs.image }} bin/console nelmio:apidoc:dump
+        run: docker run -e APP_ENV=prod ${{ inputs.image }} bin/console --no-debug nelmio:apidoc:dump
       - name: Dump openapi schema
-        run: docker run -e APP_ENV=prod -e APP_DEBUG=0 ${{ inputs.image }} bin/console nelmio:apidoc:dump > openapi.json
+        run: docker run -e APP_ENV=prod ${{ inputs.image }} bin/console --no-debug nelmio:apidoc:dump > openapi.json
       - name: Upload artifact
         uses: actions/upload-artifact@v3
         with:
