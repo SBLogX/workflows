@@ -31,7 +31,7 @@ jobs:
         run: docker pull ${{ inputs.image }}
       
       - name: Echo openapi schema
-        run: docker run -e APP_ENV=prod ${{ inputs.image }} bin/console nelmio:apidoc:dump | jq
+        run: docker run -e APP_ENV=prod ${{ inputs.image }} bin/console nelmio:apidoc:dump
       - name: Dump openapi schema
         run: docker run -e APP_ENV=prod ${{ inputs.image }} bin/console nelmio:apidoc:dump > openapi.json
 
